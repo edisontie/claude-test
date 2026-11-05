@@ -1,0 +1,9 @@
+{
+  "name": "anatomy",
+  "description": "Build crafted, interactive isometric SVG figures that explain a technical idea as a real physical object. Packaged from wheresryan22/anatomy (MIT).",
+  "author": { "name": "wheresryan22", "url": "https://github.com/wheresryan22" },
+  "homepage": "https://github.com/wheresryan22/anatomy",
+  "repository": "https://github.com/wheresryan22/anatomy",
+  "license": "MIT",
+  "keywords": ["isometric", "svg", "diagram", "explainer"]
+}

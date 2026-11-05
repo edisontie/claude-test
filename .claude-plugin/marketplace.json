@@ -1,0 +1,12 @@
+{
+  "name": "edisontie-plugins",
+  "description": "Edison's personal Claude plugins",
+  "owner": { "name": "Edison Tie" },
+  "plugins": [
+    {
+      "name": "anatomy",
+      "source": "./plugins/anatomy",
+      "description": "Interactive isometric SVG figures that explain a technical idea as a real physical machine"
+    }
+  ]
+}

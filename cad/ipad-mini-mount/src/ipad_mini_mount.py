@@ -1,13 +1,15 @@
-"""A two-piece wall mount for an iPad mini (6th gen / A17 Pro), held in landscape.
+"""A one-piece wall mount for an iPad mini (6th gen / A17 Pro), held in landscape.
 
-A bottom cradle and a top clip screw to the wall, one above the other. To mount the iPad, push
-its top edge up into the top clip, swing the bottom in past the cradle's lip, and let it drop
-onto the cradle floor. The lips cover only the bezel (about 8 mm), never the screen.
-The USB-C port and speakers are on the short sides, which stay open.
+One rigid C-shaped bracket screws to the wall: a cradle at the bottom, a clip at the top and a
+back plate joining them, so the gap between cradle and clip is fixed by the part, not by where
+the holes are drilled. To mount the iPad, push its top edge up into the clip, swing the bottom
+in past the cradle's lip, and let it drop onto the cradle floor. The lips cover only the bezel
+(about 8 mm), never the screen. The USB-C port and speakers are on the short sides, which stay
+open.
 
-Each part is modeled as it prints: its profile lies on the bed and the part grows along Z, so
-nothing overhangs. Local axes of a part: X out from the wall, Y up the wall, Z along the iPad's
-long edge. Units: mm.
+The part is modeled as it prints: its side profile lies on the bed and it grows along Z, so
+nothing overhangs, and the window in the back plate has 45 degree faces. Local axes: X out from
+the wall, Y up the wall, Z along the iPad's long edge. Units: mm.
 """
 
 import build123d as bd
@@ -28,18 +30,17 @@ TOP_LIP = 14.0  # top lip depth below the clip's ceiling
 LIFT = 8.5  # how far the iPad lifts into the clip to clear the bottom lip
 # at rest the top lip covers TOP_LIP - LIFT = 5.5 mm of bezel
 
-BOTTOM_LEN, BOTTOM_TALL = 120.0, 30.0
-TOP_LEN, TOP_TALL, TOP_BELOW = 50.0, 30.0, 20.0  # TOP_BELOW: plate below the lip for the screws
-
+LENGTH = 70.0  # along the iPad's long edge
 SCREW_D, HEAD_D = 4.2, 8.6  # #8 or 4 mm countersunk wood screws
-BOTTOM_SCREWS = (-35.0, 35.0)  # along the length, from the centre
-TOP_SCREWS = (-15.0, 15.0)
+SCREW_Z = (-20.0, 20.0)  # along the length, from the centre
 ROUND = 1.2
+WINDOW = 18.0  # half-diagonal of the diamond window in the back plate
 
-# where each part sits on the wall: the cradle floor is the iPad's resting height
-FLOOR_Y = PLATE  # in the cradle's own frame
-CEILING_Y = TOP_TALL - PLATE  # in the clip's own frame
-TOP_OFFSET = FLOOR_Y + IPAD_H + LIFT - CEILING_Y  # clip base above cradle base
+FLOOR_Y = PLATE  # the iPad's resting height
+CEILING_Y = FLOOR_Y + IPAD_H + LIFT  # underside of the clip's roof
+TOP_Y = CEILING_Y + PLATE  # overall height
+LOW_SCREW_Y = 25.0  # above the cradle's lip
+HIGH_SCREW_Y = CEILING_Y - TOP_LIP - 13.0  # below the clip's lip, so a screwdriver reaches it
 
 
 def screw_hole(y, z):
@@ -70,22 +71,6 @@ def rounded(part, seats):
     return bd.fillet(edges, ROUND)
 
 
-def bottom_body():
-    lip_x = PLATE + CHANNEL
-    lip_out = lip_x + PLATE  # the cradle's lip sits closer in than the clip's
-    pts = [
-        (0, 0), (lip_out, 0), (lip_out, FLOOR_Y + BOTTOM_LIP), (lip_x, FLOOR_Y + BOTTOM_LIP),
-        (lip_x, FLOOR_Y), (PLATE, FLOOR_Y), (PLATE, BOTTOM_TALL), (0, BOTTOM_TALL),
-    ]
-    body = rounded(profile_part(pts, BOTTOM_LEN), [(PLATE, FLOOR_Y), (lip_x, FLOOR_Y)])
-    hole_y = (FLOOR_Y + BOTTOM_LIP + BOTTOM_TALL) / 2 + 1
-    for dz in BOTTOM_SCREWS:
-        body = body - screw_hole(hole_y, BOTTOM_LEN / 2 + dz)
-    body.label = "bottom_cradle"
-    body.color = "#e8e6e1"
-    return body
-
-
 def swing_clearance():
     """How far past the bottom lip the iPad's lower edge can swing while its top is in the clip.
 
@@ -102,31 +87,44 @@ def swing_clearance():
     return IPAD_H * math.sin(a) - needed, math.degrees(a)
 
 
-def top_body():
+def diamond_window(y, z, half):
+    """A diamond through the back plate: its faces lean 45 degrees, so it prints unsupported."""
+    with bd.BuildPart() as cut:
+        with bd.BuildSketch(bd.Plane.YZ):
+            bd.Polygon((y - half, z), (y, z + half), (y + half, z), (y, z - half), align=None)
+        bd.extrude(amount=PLATE + 2, both=True)
+    return cut.part
+
+
+def mount_body():
     margin, _ = swing_clearance()
     assert margin > 5, f"the iPad cannot swing in past the bottom lip (margin {margin:.1f} mm)"
-    lip_x = PLATE + TOP_CHANNEL
-    lip_bottom = CEILING_Y - TOP_LIP
+    low_lip = PLATE + CHANNEL  # cradle lip, inner face
+    top_lip = PLATE + TOP_CHANNEL  # clip lip, inner face
     pts = [
-        (0, -TOP_BELOW), (PLATE, -TOP_BELOW), (PLATE, CEILING_Y), (lip_x, CEILING_Y),
-        (lip_x, lip_bottom), (OUTER, lip_bottom), (OUTER, TOP_TALL), (0, TOP_TALL),
+        (0, 0), (low_lip + PLATE, 0), (low_lip + PLATE, FLOOR_Y + BOTTOM_LIP),
+        (low_lip, FLOOR_Y + BOTTOM_LIP), (low_lip, FLOOR_Y), (PLATE, FLOOR_Y),
+        (PLATE, CEILING_Y), (top_lip, CEILING_Y), (top_lip, CEILING_Y - TOP_LIP),
+        (OUTER, CEILING_Y - TOP_LIP), (OUTER, TOP_Y), (0, TOP_Y),
     ]
-    body = rounded(profile_part(pts, TOP_LEN), [(PLATE, CEILING_Y), (lip_x, CEILING_Y)])
-    for dz in TOP_SCREWS:
-        body = body - screw_hole(-TOP_BELOW / 2, TOP_LEN / 2 + dz)
-    body.label = "top_clip"
+    seats = [(PLATE, FLOOR_Y), (low_lip, FLOOR_Y), (PLATE, CEILING_Y), (top_lip, CEILING_Y)]
+    body = rounded(profile_part(pts, LENGTH), seats)
+    for y in (LOW_SCREW_Y, HIGH_SCREW_Y):
+        for dz in SCREW_Z:
+            body = body - screw_hole(y, LENGTH / 2 + dz)
+    window_y = (LOW_SCREW_Y + HIGH_SCREW_Y) / 2
+    assert window_y - WINDOW > LOW_SCREW_Y + HEAD_D and window_y + WINDOW < HIGH_SCREW_Y - HEAD_D
+    body = body - diamond_window(window_y, LENGTH / 2, WINDOW)
+    assert len(body.solids()) == 1
+    assert abs(body.bounding_box().size.Y - TOP_Y) < 1e-6
+    body.label = "ipad_mini_mount"
     body.color = "#e8e6e1"
     return body
 
 
 @model
-def bottom_cradle():
-    return bottom_body()
-
-
-@model
-def top_clip():
-    return top_body()
+def ipad_mini_mount():
+    return mount_body()
 
 
 # wall frame: X along the wall, Z up, the wall at y = 0 and the iPad out at -Y;
@@ -146,17 +144,13 @@ def ipad_body():
 
 @model
 def wall_mount():
-    bottom = on_wall(bottom_cradle().shape, BOTTOM_LEN / 2, 0)
-    bottom.label = "bottom_cradle"
-    top = on_wall(top_clip().shape, TOP_LEN / 2, TOP_OFFSET)
-    top.label = "top_clip"
+    mount = on_wall(ipad_mini_mount().shape, LENGTH / 2, 0)
+    mount.label = "ipad_mini_mount"
     # the iPad resting on the cradle floor, its back CLEARANCE / 2 off the back plate
     ipad = bd.Pos(0, -PLATE - CLEARANCE / 2, FLOOR_Y) * ipad_body()
     ipad.label = "ipad_mini"
-    for part in (bottom, top):
-        box = part.bounding_box()
-        assert abs(box.max.Y) < 1e-6, "parts stand on the wall"
-    return bd.Compound(children=[bottom, top, ipad], label="wall_mount")
+    assert abs(mount.bounding_box().max.Y) < 1e-6, "the mount stands on the wall"
+    return bd.Compound(children=[mount, ipad], label="wall_mount")
 
 
 if __name__ == "__main__":

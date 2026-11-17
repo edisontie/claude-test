@@ -1,12 +1,23 @@
 {
   "name": "edisontie-plugins",
   "description": "Edison's personal Claude plugins",
-  "owner": { "name": "Edison Tie" },
+  "owner": {
+    "name": "Edison Tie"
+  },
   "plugins": [
     {
       "name": "anatomy",
       "source": "./plugins/anatomy",
       "description": "Interactive isometric SVG figures that explain a technical idea as a real physical machine"
+    },
+    {
+      "name": "text-to-cad",
+      "source": {
+        "source": "github",
+        "repo": "earthtojake/text-to-cad",
+        "ref": "v0.11.10"
+      },
+      "description": "Parametric CAD with build123d: STEP/STL/3MF/GLB exports, manufacturing checks, engineering drawings, FEA, PCBs, renders and robot descriptions"
     }
   ]
 }
